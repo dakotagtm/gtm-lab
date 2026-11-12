@@ -16,7 +16,14 @@ export const headers = {
 export async function send(url, options = {}) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      return await fetch(url, { headers, ...options });
+      const response = await fetch(url, { headers, ...options });
+      if (response.status === 429) {
+        // 429 means "too many requests". Wait, then ask again.
+        console.log('HubSpot asked us to slow down. Waiting 10 seconds.');
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        continue;
+      }
+      return response;
     } catch (error) {
       console.log(`Could not connect (try ${attempt} of 3).`);
       if (attempt === 3) {
@@ -51,4 +58,26 @@ export function cleanPhone(value) {
 // Names compared without regard to capitals or stray spaces.
 export function cleanName(first, last) {
   return [first, last].filter(Boolean).join(' ').trim().toLowerCase();
+}
+
+// Emails compared in one form: no spaces, all lowercase.
+export function cleanEmail(value) {
+  return (value || '').replace(/\s+/g, '').toLowerCase();
+}
+
+// Look first, then create or update. Returns 'created', 'updated' or a reason it failed.
+export async function upsertContact(contact) {
+  const lookup = await send(`${API}/${encodeURIComponent(contact.email)}?idProperty=email`);
+  if (lookup.status === 200) {
+    const found = await readBody(lookup);
+    const updated = await send(`${API}/${found.id}`, { method: 'PATCH', body: JSON.stringify({ properties: contact }) });
+    if (updated.ok) return 'updated';
+    return `update failed (${updated.status}): ${(await readBody(updated)).message}`;
+  }
+  if (lookup.status === 404) {
+    const created = await send(API, { method: 'POST', body: JSON.stringify({ properties: contact }) });
+    if (created.ok) return 'created';
+    return `create failed (${created.status}): ${(await readBody(created)).message}`;
+  }
+  return `lookup failed (${lookup.status})`;
 }

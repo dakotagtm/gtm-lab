@@ -8,7 +8,7 @@ import { API, send, readBody, cleanPhone, cleanName } from './hubspot.mjs';
 const contacts = [];
 let after = '';
 do {
-  const page = await send(`${API}?limit=100&properties=email,firstname,lastname,phone${after}`);
+  const page = await send(`${API}?limit=100&properties=email,firstname,lastname,phone,company${after}`);
   console.log('Read status:', page.status);
   const body = await readBody(page);
   if (!page.ok) {
@@ -25,6 +25,7 @@ const people = contacts.map((contact) => ({
   email: contact.properties.email || '(no email)',
   name: [contact.properties.firstname, contact.properties.lastname].filter(Boolean).join(' ') || '(no name)',
   phone: cleanPhone(contact.properties.phone),
+  company: contact.properties.company || 'no company',
   nameKey: cleanName(contact.properties.firstname, contact.properties.lastname),
 }));
 
@@ -44,9 +45,11 @@ for (let i = 0; i < people.length; i++) {
 // 4. Strongest evidence first, then print the review list.
 pairs.sort((x, y) => y.evidence.length - x.evidence.length);
 
-const line = (p) => `   ${p.name} | ${p.email} | ${p.phone || 'no phone'} | id ${p.id}`;
+const line = (p) => `   ${p.name} | ${p.email} | ${p.phone || 'no phone'} | ${p.company} | id ${p.id}`;
+let number = 0;
 for (const pair of pairs) {
-  console.log(`\nLIKELY DOUBLE: ${pair.evidence.join(' and ')}`);
+  number++;
+  console.log(`\n${number}. LIKELY DOUBLE: ${pair.evidence.join(' and ')}`);
   console.log(line(pair.a));
   console.log(line(pair.b));
 }
