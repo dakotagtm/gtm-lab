@@ -1,0 +1,3 @@
+#!/bin/sh
+# Shortcut: ./pipeline
+cd "$(dirname "$0")" && exec node --env-file=.env crm/money-in-play.mjs "$@"

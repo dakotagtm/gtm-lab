@@ -6,7 +6,13 @@ if (!token) {
   process.exit(1);
 }
 
-export const API = 'https://api.hubapi.com/crm/v3/objects/contacts';
+// CRM is the root. Contacts, companies and deals each live one step below it.
+export const CRM = 'https://api.hubapi.com/crm/v3/objects';
+export const API = `${CRM}/contacts`;
+// Links between records use HubSpot's newer, dated address.
+export const LINKS = 'https://api.hubapi.com/crm/objects/2026-09';
+// Pipelines and their stages have their own address.
+export const PIPELINES = 'https://api.hubapi.com/crm/pipelines/2026-09';
 export const headers = {
   Authorization: `Bearer ${token}`,
   'Content-Type': 'application/json',
@@ -34,6 +40,20 @@ export async function send(url, options = {}) {
       await new Promise((resolve) => setTimeout(resolve, 10000));
     }
   }
+}
+
+// Read every record at an address, 100 at a time, following HubSpot's "next page" marker.
+export async function readAll(url) {
+  const all = [];
+  let after = '';
+  do {
+    const page = await send(`${url}${url.includes('?') ? '&' : '?'}limit=100${after}`);
+    const body = await readBody(page);
+    if (!page.ok) return { ok: false, status: page.status, message: body.message, results: all };
+    all.push(...body.results);
+    after = body.paging?.next ? `&after=${body.paging.next.after}` : '';
+  } while (after);
+  return { ok: true, status: 200, results: all };
 }
 
 // HubSpot usually answers in JSON, but not always.
