@@ -45,3 +45,32 @@ The survivor keeps its own email as the main one and takes the other as an extra
 ## hubspot.mjs
 
 Shared helpers: the key, the retry on a dropped connection, and the cleaning rules for phones and names.
+
+## import-contacts.mjs
+
+Imports a customer list from a CSV file. It reports first and loads only with `--yes`.
+
+1. Reads the file and never changes it.
+2. Cleans every row: email, names, US phone numbers.
+3. Sets aside rows with no usable email, each with its reason.
+4. Keeps one row per email. When an email repeats, the last row in the file wins.
+5. Prints a report whose counts add up to the number of rows.
+6. With `--yes`, creates or updates each contact. A second run creates nothing.
+
+```
+./import                    # dry run on the sample file
+./import path/to/file.csv   # dry run on your own file
+./import --yes              # load
+```
+
+`sample-data/copper-canyon-contacts.csv` is a practice list of 60 rows for a made-up business. Every name is invented, the emails use reserved test domains and the phone numbers are in the fictional 555-01xx range.
+
+## delete-practice-contacts.mjs
+
+Removes practice contacts only: emails at `example.com`, `example.org` and `example.net`. Those domains are reserved for testing, so the rule cannot match a real customer. There is no option to delete everything. It previews by default.
+
+```
+./cleanup                          # preview
+./cleanup --yes                    # remove
+./cleanup someone@else.com --yes   # also remove a named address
+```
